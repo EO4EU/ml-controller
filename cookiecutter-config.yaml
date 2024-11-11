@@ -1,0 +1,24 @@
+default_context:
+  chart_name: "controller"
+  chart_version: "0.1.0"
+  need_dep_chart: "no"
+  include_service: "yes"
+  service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-cicd/eo4eu-inference-server/controller"
+  service_image_tag: "latest"
+  service_image_pull_policy: "Always"
+  service_image_secret: "controller-registry"
+  service_container_port: "8080"
+  include_namespace: "yes"
+  include_kafka_source: "yes"
+  kafka_source_endpoint: "kafka-external.apps.eo4eu.eu:9092"
+  include_external_registry_secret: "yes"
+  external_registry_secret_name: "controller-registry"
+  k8s_registry_secret_name: "controller-registry"
+  external_registry_secret_data:
+    "data": [
+      {
+        secret_key: "dockerconfigjson",
+        vault_secret_key: "registry_pull_secret/inference_server/controller",
+        vault_secret_property: ".dockerconfigjson"
+      }
+    ]
