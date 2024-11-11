@@ -196,6 +196,7 @@ class Controller:
         namespace: Annotated[str, Doc("Registry namespace")],
         repo: Annotated[str, Doc("Registry repo")],
         tag: Annotated[str, Doc("Image tag")],
+        username: Annotated[str, Doc("Registry username")],
         password: Annotated[dagger.Secret, Doc("Registry password")],
         wkd: Annotated[
             dagger.Directory,
@@ -204,18 +205,32 @@ class Controller:
     ) -> str:
         """Build and publish image from existing Dockerfile"""
         token = await password.plaintext()
+        config = (
+            dag.container()
+            .from_("alpine:latest")
+            .with_exec(
+                [
+                    "printf",
+                    "'{\"auths\":{\"%s\":{\"auth\":\"$(echo -n %s:%s | base64)\"}}}'"
+                    f"{registry}",
+                    f"{username}",
+                    f"{token}"
+                ],
+                redirect_stdout="/tmp/config.json"
+            )
+        )
         return await (
             dag.container(platform=dagger.Platform("linux/amd64"))
             .from_("gcr.io/kaniko-project/executor:debug")
-            .with_env_variable("GIT_TOKEN", token)
-            .with_mounted_directory("/workspace", wkd)
+            .with_file("/kaniko/.docker/config.json", config.file("/tmp/config.json"))
+            .with_mounted_directory("/kaniko/.docker", wkd)
             .with_exec(
                 [
                     "/kaniko/executor",
                     "--context", 
-                    "dir:///workspace/",
+                    "dir:///kaniko/.docker/",
                     "--dockerfile",
-                    "/workspace/Dockerfile",
+                    "/kaniko/.docker/Dockerfile",
                     "--destination",
                     f"{registry}/{namespace}/{repo}:{tag}"
                 ]
