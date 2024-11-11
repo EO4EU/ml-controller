@@ -190,6 +190,26 @@ class Controller:
         )
 
     @function
+    async def encode(
+        self,
+        username: Annotated[str, Doc("Registry username")],
+        password: Annotated[dagger.Secret, Doc("Registry password")],
+    ) -> str:
+        token = await password.plaintext()
+        return await (
+            dag.container()
+            .from_("alpine:latest")
+            .with_exec(
+                [
+                    "/bin/sh",
+                    "-c",
+                    f"printf {username}:{token} | base64"
+                ]
+            )
+            .stdout()
+        )
+
+    @function
     async def push(
         self,
         registry: Annotated[str, Doc("Registry address")],
@@ -204,17 +224,17 @@ class Controller:
         ],
     ) -> str:
         """Build and publish image from existing Dockerfile"""
-        token = await password.plaintext()
+        blob = await self.encode(username, password)
         config = (
             dag.container()
             .from_("alpine:latest")
+            .with_env_variable("CI_REGISTRY", registry)
+            .with_env_variable("CI_BLOB", blob)
             .with_exec(
                 [
-                    "printf",
-                    "'{\"auths\":{\"%s\":{\"auth\":\"$(echo -n %s:%s | base64)\"}}}'"
-                    f"{registry}",
-                    f"{username}",
-                    f"{token}"
+                    "/bin/sh",
+                    "-c",
+                    "echo '{\"auths\":{\"'$CI_REGISTRY'\":{\"auth\":\"'$CI_BLOB'\"}}}' | sed 's/ //g'"
                 ],
                 redirect_stdout="/tmp/config.json"
             )
@@ -223,7 +243,7 @@ class Controller:
             dag.container(platform=dagger.Platform("linux/amd64"))
             .from_("gcr.io/kaniko-project/executor:debug")
             .with_file("/kaniko/.docker/config.json", config.file("/tmp/config.json"))
-            .with_mounted_directory("/kaniko/.docker", wkd)
+            .with_directory("/kaniko/.docker", wkd)
             .with_exec(
                 [
                     "/kaniko/executor",
