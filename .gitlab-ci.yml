@@ -126,7 +126,7 @@ push_image:
     - |
       if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
         dagger call push \
-        --registry $REGISTRY \
+        --registry $CI_REGISTRY \
         --namespace $REPO_NAMESPACE \
         --repo $REPO \
         --tag $TAG \
