@@ -8,7 +8,6 @@
     HELM_NAMESPACE: eo4eu/eo4eu-cicd/cicd-infra
     REGISTRY: registry.apps.eo4eu.eu
     REPO: controller
-    APP: controller
     SERVICE: inference-server
     HELM: helm-repo
     REPO_BRANCH: main
