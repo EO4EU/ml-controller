@@ -130,8 +130,7 @@ push_image:
         --namespace $REPO_NAMESPACE \
         --repo $REPO \
         --tag $TAG \
-        --username $CI_REPO_USERNAME \
-        --password env:CI_REPO_PASSWORD \
+        --password env:CI_JOB_TOKEN \
         --wkd .
       fi
 update_helm:
