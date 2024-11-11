@@ -10,7 +10,7 @@ default_context:
   service_container_port: "8080"
   include_namespace: "yes"
   include_kafka_source: "yes"
-  kafka_source_endpoint: "kafka-external.apps.eo4eu.eu:9092"
+  kafka_source_endpoint: "kafka-external.dev.apps.eo4eu.eu:9092"
   include_external_registry_secret: "yes"
   external_registry_secret_name: "controller-registry"
   k8s_registry_secret_name: "controller-registry"
