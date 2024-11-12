@@ -155,7 +155,7 @@ update_helm:
     - dagger call update
       --gitlab $GITLAB
       --repo $REPO
-      --branch $SERVICE-controller
+      --branch $SERVICE-$REPO
       --username $CI_COOKIECUTTER_USERNAME
       --password env:CI_COOKIECUTTER_PASSWORD
       --wkd .
@@ -172,8 +172,7 @@ sync_helm:
     untracked: true
   script:
     - rm -rf $HELM/$SERVICE
-    - mkdir -p $HELM/$SERVICE
-    - cp -r /builds/$REPO_NAMESPACE/$REPO/$SERVICE-helm $HELM/$SERVICE/$REPO
+    - cp -r /builds/$REPO_NAMESPACE/$REPO/$SERVICE-helm $HELM/$SERVICE-$REPO
     - cd $HELM
     - git config user.email "federico.fornari@ecmwf.int"
     - git config user.name "Cookiecutter"
