@@ -4,7 +4,7 @@ default_context:
   need_dep_chart: "no"
   include_service: "yes"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-cicd/eo4eu-inference-server/controller"
-  service_image_tag: "latest"
+  service_image_tag: "3f0d6218aa374aa25f2c8e245cf222318d76742f"
   service_image_pull_policy: "Always"
   service_image_secret: "controller-registry"
   service_container_port: "8080"
