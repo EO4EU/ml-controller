@@ -121,7 +121,7 @@ def createResources(TopicIn,namespace,serviceName,requestData):
       },
         "spec": {
             "initialOffset": "latest",
-            "bootstrapServers": ["kafka-external.apps.eo4eu.eu:9092"]
+            "bootstrapServers": ["kafka-external.dev.apps.eo4eu.eu:9092"],
             "topics": [TopicIn],
             "sink": {
                 "ref": {
@@ -140,7 +140,7 @@ def createResources(TopicIn,namespace,serviceName,requestData):
 
     config_map.data={
         "jsonSuperviserRequest": requestData.decode(),
-        "bootstrapServers": "kafka-external.apps.eo4eu.eu:9092"
+        "bootstrapServers": "kafka-external.dev.apps.eo4eu.eu:9092",
     }
 
     api_instance = client.CoreV1Api()
