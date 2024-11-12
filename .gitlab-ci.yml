@@ -126,12 +126,12 @@ push_image:
     - |
       if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
         dagger call push \
-        --registry $CI_REGISTRY \
+        --registry $REGISTRY \
         --namespace $REPO_NAMESPACE \
         --repo $REPO \
         --tag $TAG \
-        --username $CI_REGISTRY_USER \
-        --password env:CI_REGISTRY_PASSWORD \
+        --username $CI_REPO_USERNAME \
+        --password env:CI_REPO_PASSWORD \
         --wkd .
       fi
 update_helm:
