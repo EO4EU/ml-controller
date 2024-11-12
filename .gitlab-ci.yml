@@ -171,7 +171,7 @@ sync_helm:
   artifacts:
     untracked: true
   script:
-    - rm -rf $HELM/$SERVICE
+    - rm -rf $HELM/$SERVICE-$REPO
     - cp -r /builds/$REPO_NAMESPACE/$REPO/$SERVICE-helm $HELM/$SERVICE-$REPO
     - cd $HELM
     - git config user.email "federico.fornari@ecmwf.int"
