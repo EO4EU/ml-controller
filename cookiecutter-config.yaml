@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.1.1"
+  chart_version: "0.1.2"
   need_dep_chart: "no"
   include_service: "yes"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-cicd/eo4eu-inference-server/controller"
@@ -10,7 +10,7 @@ default_context:
   service_container_port: "8080"
   include_namespace: "yes"
   include_kafka_source: "yes"
-  kafka_source_endpoint: "kafka-external.dev.apps.eo4eu.eu:9092"
+  kafka_source_endpoint: "kafka-external.apps.eo4eu.eu:9092"
   include_external_registry_secret: "yes"
   external_registry_secret_name: "controller-registry"
   k8s_registry_secret_name: "controller-registry"
