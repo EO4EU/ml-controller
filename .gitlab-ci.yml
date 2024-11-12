@@ -59,9 +59,9 @@ update_endpoint:
         export KAFKA_ENDPOINT=$(grep 'kafka_source_endpoint:' \
           cookiecutter-config.yaml | \
           awk '{print $2}' | tr -d '"')
-        sed -i 's/\(\s*"bootstrapServers": "\)\(.*\)/\1'"$KAFKA_ENDPOINT"'"/g' \
+        sed -i 's/\(\s*"bootstrapServers": "\)\(.*\)/\1'"$KAFKA_ENDPOINT"'",/g' \
           controller.py
-        sed -i 's/\(\s*"bootstrapServers": \["\)\(.*\)/\1'"$KAFKA_ENDPOINT"'"\]/g' \
+        sed -i 's/\(\s*"bootstrapServers": \["\)\(.*\)/\1'"$KAFKA_ENDPOINT"'"\],/g' \
           controller.py  
         git config user.email "federico.fornari@ecmwf.int"
         git config user.name "Cookiecutter"
