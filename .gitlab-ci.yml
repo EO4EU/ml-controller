@@ -10,8 +10,8 @@
     REPO: controller
     SERVICE: inference-server
     HELM: helm-repo
-    REPO_BRANCH: main
-    HELM_BRANCH: main
+    REPO_BRANCH: dev
+    HELM_BRANCH: dev
   before_script:
     - "apk --no-cache add jq"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
