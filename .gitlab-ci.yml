@@ -59,10 +59,10 @@ update_endpoint:
         export KAFKA_ENDPOINT=$(grep 'kafka_source_endpoint:' \
           cookiecutter-config.yaml | \
           awk '{print $2}' | tr -d '"')
-        sed -i 's/\(\s*"bootstrapServers": "\)\(.*\)/\1'"$KAFKA_ENDPOINT"'",/g' \
-          controller.py
-        sed -i 's/\(\s*"bootstrapServers": \["\)\(.*\)/\1'"$KAFKA_ENDPOINT"'"\],/g' \
-          controller.py  
+        find build -type f -exec sed -i \
+          's/\(\s*"bootstrapServers": "\)\(.*\)/\1'"$KAFKA_ENDPOINT"'",/g' {} \;
+        find build -type f -exec sed -i \
+          's/\(\s*"bootstrapServers": \["\)\(.*\)/\1'"$KAFKA_ENDPOINT"'"\],/g' {} \;
         git config user.email "federico.fornari@ecmwf.int"
         git config user.name "Cookiecutter"
         git add --all
@@ -77,7 +77,7 @@ build_image:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         dagger call build \
         --bucket $BUCKET \
         --endpoint https://$MINIO \
@@ -85,7 +85,7 @@ build_image:
         --secret env:S3_SECRET_KEY \
         --repo $REPO \
         --tag $TAG \
-        --wkd .
+        --wkd build
       fi
 scan_image:
   extends: [.dagger]
@@ -96,7 +96,7 @@ scan_image:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         dagger call scan \
         --bucket $BUCKET \
         --endpoint https://$MINIO \
@@ -124,7 +124,7 @@ push_image:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         dagger call push \
         --registry $REGISTRY \
         --namespace $REPO_NAMESPACE \
@@ -132,7 +132,7 @@ push_image:
         --tag $TAG \
         --username $CI_REPO_USERNAME \
         --password env:CI_REPO_PASSWORD \
-        --wkd .
+        --wkd build
       fi
 update_helm:
   extends: [.dagger]
@@ -144,7 +144,7 @@ update_helm:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         sed -i 's/\(  service_image_tag: "\)\(.*\)/\1'"$TAG"'"/g' cookiecutter-config.yaml
         git config user.email "federico.fornari@ecmwf.int"
         git config user.name "Cookiecutter"
@@ -186,7 +186,7 @@ clean_registry:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(Dockerfile|controller\.py|requirements\.txt)$'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         dagger call clean \
         --bucket $BUCKET \
         --endpoint https://$MINIO \
