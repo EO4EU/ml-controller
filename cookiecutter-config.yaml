@@ -5,7 +5,7 @@ default_context:
   include_service: "yes"
   service_name: "controller-communication-dsl-dev"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-cicd/eo4eu-inference-server/controller"
-  service_image_tag: "c80d251e68a0150dc5a37afa13208b4386b1288a"
+  service_image_tag: "06cfe9ce8b1264bd5816ab0bcab65cf93973ef96"
   service_image_pull_policy: "Always"
   service_image_secret: "controller-registry"
   service_container_port: "8080"
