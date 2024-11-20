@@ -6,7 +6,7 @@ from kubernetes import client, config
 import sys
 import logging
 
-from KafkaHander import KafkaHandler,DefaultContextFilter
+from KafkaHandler import KafkaHandler,DefaultContextFilter
 
 if sys.version_info >= (3, 12, 0):
     import six
