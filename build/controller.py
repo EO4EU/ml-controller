@@ -24,13 +24,7 @@ def create_app():
     app.logger.addHandler(handler)
     app.logger.addHandler(console_handler)
 
-    @app.before_first_request
-    def startup():
-        app.logger.info("Starting up...", extra={'logName': 'startup'})
-
-    @app.teardown_appcontext
-    def shutdown(exception=None):
-        app.logger.info("Shuting down...", extra={'logName': 'shutdown'})
+    app.logger.info("Starting up...", extra={'logName': 'startup'})
 
     # Provisioner receiving topics to listen by http in a post request.
 
