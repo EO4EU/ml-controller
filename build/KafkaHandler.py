@@ -35,7 +35,6 @@ class KafkaHandler(logging.Handler):
         optional={}
         optional["namespace"]=get_current_namespace()
         optional["pod"]=get_current_pod_name()
-        optional['other']=record
         message["optional"]=optional
         self.producer.send("monitoring.notify",key='key',value=message)
         self.producer.flush()
