@@ -133,51 +133,51 @@ def create_app():
     # The ConfigMap will be used by the service serviceName to get the json of the request.
     #
     def createResources(TopicIn,namespace,serviceName,requestData):
-    config.load_incluster_config()
-    api = kubernetes.client.CustomObjectsApi()
-    try:
-        resourceBody={
-            "apiVersion": "sources.knative.dev/v1beta1",
-            "kind": "KafkaSource",
-            "metadata": {
-            "name": truncate_string(TopicIn.lower()),
-            "namespace": namespace
-        },
-            "spec": {
-                "initialOffset": "latest",
-                "bootstrapServers": ["kafka-external.dev.apps.eo4eu.eu:9092"],
-                "topics": [TopicIn],
-                "sink": {
-                    "ref": {
-                        "apiVersion": "serving.knative.dev/v1",
-                        "kind": "Service",
-                        "name": serviceName.lower(),
-                        "namespace": namespace,
-                    },
-                    "uri": "/json-config-"+TopicIn.lower()
+        config.load_incluster_config()
+        api = kubernetes.client.CustomObjectsApi()
+        try:
+            resourceBody={
+                "apiVersion": "sources.knative.dev/v1beta1",
+                "kind": "KafkaSource",
+                "metadata": {
+                "name": truncate_string(TopicIn.lower()),
+                "namespace": namespace
+            },
+                "spec": {
+                    "initialOffset": "latest",
+                    "bootstrapServers": ["kafka-external.dev.apps.eo4eu.eu:9092"],
+                    "topics": [TopicIn],
+                    "sink": {
+                        "ref": {
+                            "apiVersion": "serving.knative.dev/v1",
+                            "kind": "Service",
+                            "name": serviceName.lower(),
+                            "namespace": namespace,
+                        },
+                        "uri": "/json-config-"+TopicIn.lower()
+                    }
                 }
             }
-        }
 
-        config_map = client.V1ConfigMap()
-        config_map.metadata = client.V1ObjectMeta(name="json-config-"+TopicIn.lower(),namespace=namespace)
+            config_map = client.V1ConfigMap()
+            config_map.metadata = client.V1ObjectMeta(name="json-config-"+TopicIn.lower(),namespace=namespace)
 
-        config_map.data={
-            "jsonSuperviserRequest": requestData.decode(),
-            "bootstrapServers": "kafka-external.dev.apps.eo4eu.eu:9092",
-        }
+            config_map.data={
+                "jsonSuperviserRequest": requestData.decode(),
+                "bootstrapServers": "kafka-external.dev.apps.eo4eu.eu:9092",
+            }
 
-        api_instance = client.CoreV1Api()
-        api_response = api_instance.create_namespaced_config_map(namespace, config_map)
+            api_instance = client.CoreV1Api()
+            api_response = api_instance.create_namespaced_config_map(namespace, config_map)
 
-        resource = api.create_namespaced_custom_object(
-            group="sources.knative.dev",
-            version="v1beta1",
-            plural="kafkasources",
-            namespace=namespace,
-            body=resourceBody)
-        app.logger.warning('Resources created')
-    except Exception as e:
-        app.logger.warning('Got exception '+str(e))
+            resource = api.create_namespaced_custom_object(
+                group="sources.knative.dev",
+                version="v1beta1",
+                plural="kafkasources",
+                namespace=namespace,
+                body=resourceBody)
+            app.logger.warning('Resources created')
+        except Exception as e:
+            app.logger.warning('Got exception '+str(e))
 
     return app
