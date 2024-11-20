@@ -54,7 +54,7 @@ def create_app():
     def controller_post():
         # TODO : Debugging message to remove in production.
         # Message received.
-        app.logger.warning(request.data)
+        app.logger.info(request.data, extra={'logName': 'request.data'})
         response=None
         # Try block to ensure the service answer even if the message is malformed.
         try:
@@ -72,10 +72,10 @@ def create_app():
                 serviceName=data["ML"]["ServiceName"]
                 namespace=data["ML"]["Namespace"]
                 # TODO : Debugging message to remove in production.
-                app.logger.warning('got topic _in '+topic_in)
-                app.logger.warning('got topic _out '+topic_out)
-                app.logger.warning('got serviceName '+serviceName)
-                app.logger.warning('got namespace '+namespace)
+                app.logger.info('topic _in '+topic_in, extra={'logName': 'topic_in'})
+                app.logger.info('topic _out '+topic_out, extra={'logName': 'topic_out'})
+                app.logger.info('serviceName '+serviceName, extra={'logName': 'serviceName'})
+                app.logger.info('namespace '+namespace, extra={'logName': 'namespace'})
                 createResources(topic_in,namespace,serviceName,request.data)
 
             # HTTP answer that the message is received and valid. This message will then be discarded only the fact that a sucess return code is returned is important.
@@ -83,8 +83,8 @@ def create_app():
             "msg": "Received message And valid"
             })
         except Exception as e: 
-            app.logger.warning('Got exception '+str(e))
-            app.logger.warning('So we are ignoring the message')
+            app.logger.error('Got exception '+str(e), extra={'logName': 'exception'})
+            app.logger.info('So we are ignoring the message',extra={'logName': 'ignore'})
             # HTTP answer that the message is malformed. This message will then be discarded only the fact that a sucess return code is returned is important.
             response = make_response({
             "msg": "There was a problem ignoring"
@@ -92,12 +92,8 @@ def create_app():
         return response
 
     def truncate_string(string):
-        app.logger.warning('before string '+string)
-
         string=string.replace("-","")
-        app.logger.warning('after replace '+string)
         string=string.replace(".","")
-        app.logger.warning('after replace2 '+string)
         if len(string) > 60:
             return string[:60]
         else:
@@ -113,13 +109,13 @@ def create_app():
                 plural="kafkasources",
                 namespace=namespace,
                 name=truncate_string(topic_in.lower()))
-            app.logger.warning('KafkaSource deleted '+truncate_string(topic_in.lower()))
+            app.logger.info('KafkaSource deleted '+truncate_string(topic_in.lower()), extra={'logName': 'KafkaSourceDeleted'})
             api_instance = client.CoreV1Api()
             bodyDelete = client.V1DeleteOptions()
             api_instance.delete_namespaced_config_map("json-config-"+topic_in.lower(),namespace, body=bodyDelete)
-            app.logger.warning('ConfigMap deleted '+'json-config-'+topic_in.lower())
+            app.logger.info('ConfigMap deleted '+'json-config-'+topic_in.lower(), extra={'logName': 'ConfigMapDeleted'})
         except Exception as e:
-            app.logger.warning('Got exception '+str(e))
+            app.logger.error('Got exception '+str(e), extra={'logName': 'exception'})
 
     # This function create the needed KafkaSource in the cluster.
     # The KafkaSource will listen to the topic TopicIn and send the message to the service serviceName in the namespace namespace.
@@ -171,8 +167,8 @@ def create_app():
                 plural="kafkasources",
                 namespace=namespace,
                 body=resourceBody)
-            app.logger.warning('Resources created')
+            app.logger.info('Resources created', extra={'logName': 'ResourcesCreated'})
         except Exception as e:
-            app.logger.warning('Got exception '+str(e))
+            app.logger.error('Got exception '+str(e), extra={'logName': 'exception'})
 
     return app
