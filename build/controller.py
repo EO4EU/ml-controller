@@ -13,9 +13,19 @@ if sys.version_info >= (3, 12, 0):
     sys.modules['kafka.vendor.six.moves'] = six.moves
 from kafka import KafkaProducer
 
+def convert_bytes(obj):
+    if isinstance(obj, dict):
+        return {key: convert_bytes(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_bytes(item) for item in obj]
+    elif isinstance(obj, bytes):
+        return obj.decode('utf-8')  # Decode bytes to string
+    else:
+        return obj
+
 def create_app():
     app = Flask(__name__)
-    Producer=KafkaProducer(bootstrap_servers="kafka-external.dev.apps.eo4eu.eu:9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'),key_serializer=str.encode)
+    Producer=KafkaProducer(bootstrap_servers="kafka-external.dev.apps.eo4eu.eu:9092",value_serializer=lambda v: json.dumps(v,default=convert_bytes).encode('utf-8'),key_serializer=str.encode)
     handler = KafkaHandler(producer=Producer,source='ML.Controller')
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
