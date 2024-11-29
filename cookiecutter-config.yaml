@@ -1,5 +1,5 @@
 default_context:
-  chart_name: "controller-dev"
+  chart_name: "controller"
   chart_version: "0.2.2"
   need_dep_chart: "no"
   include_service: "yes"
