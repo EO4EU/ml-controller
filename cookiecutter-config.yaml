@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.1.1"
+  chart_version: "0.2.0"
   need_dep_chart: "no"
   include_service: "yes"
   service_name: "controller-communication-dsl"
@@ -11,6 +11,7 @@ default_context:
   service_container_port: "8080"
   include_namespace: "yes"
   include_kafka_source: "yes"
+  include_rbac: "yes"
   kafka_source_name: "kafka-source-controller"
   kafka_source_endpoint: "kafka-external.apps.eo4eu.eu:9092"
   include_external_registry_secret: "yes"
