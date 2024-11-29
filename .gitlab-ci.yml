@@ -11,7 +11,7 @@
     SERVICE: inference-server
     HELM: helm-repo
     REPO_BRANCH: dev
-    HELM_BRANCH: dev
+    HELM_BRANCH: main
   before_script:
     - "apk --no-cache add jq"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
