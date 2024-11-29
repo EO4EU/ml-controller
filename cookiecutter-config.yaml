@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.2.2"
+  chart_version: "0.3.0"
   need_dep_chart: "no"
   include_service: "yes"
   include_rbac: "no"
