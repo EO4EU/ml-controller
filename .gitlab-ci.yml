@@ -12,6 +12,7 @@
     HELM: helm-repo
     REPO_BRANCH: main
     HELM_BRANCH: main
+    COOKIECUTTER_BRANCH: inference-server-controller
   before_script:
     - "apk --no-cache add jq"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
@@ -155,7 +156,7 @@ update_helm:
     - dagger call update
       --gitlab $GITLAB
       --repo $REPO
-      --branch $SERVICE-$REPO
+      --branch $COOKIECUTTER_BRANCH
       --username $CI_COOKIECUTTER_USERNAME
       --password env:CI_COOKIECUTTER_PASSWORD
       --wkd .
