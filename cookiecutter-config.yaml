@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.2.13"
+  chart_version: "0.2.14"
   need_dep_chart: "no"
   include_service: "yes"
   service_name: "controller-communication-dsl"
@@ -9,6 +9,9 @@ default_context:
   service_image_pull_policy: "Always"
   service_image_secret: "controller-registry"
   service_container_port: "8080"
+  service_environment_label: "production"
+  service_service_label: "Inference_Server"
+  service_component_label: "controller"
   include_namespace: "yes"
   include_kafka_source: "yes"
   include_rbac: "yes"
