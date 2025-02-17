@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.3.3"
+  chart_version: "0.3.4"
   need_dep_chart: "no"
   include_service: "yes"
   include_rbac: "no"
@@ -15,6 +15,7 @@ default_context:
   service_component_label: "controller"
   service_min_scale: "0"
   service_disable_autoscaling: "true"
+  service_revision_retain_count: "1"
   include_namespace: "yes"
   include_kafka_source: "yes"
   kafka_source_name: "kafka-source-controller-dev"
