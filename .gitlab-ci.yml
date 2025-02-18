@@ -168,8 +168,6 @@ clean_revisions:
   tags: [dagger]
   stage: .post
   needs: [push_image]
-  artifacts:
-    untracked: true
   script:
     - cd $REPO
     - |
