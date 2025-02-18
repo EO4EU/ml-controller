@@ -13,7 +13,7 @@ default_context:
   service_environment_label: "development"
   service_service_label: "Inference_Server"
   service_component_label: "controller"
-  service_min_scale: "0"
+  service_min_scale: "1"
   include_namespace: "yes"
   include_kafka_source: "yes"
   kafka_source_name: "kafka-source-controller-dev"
