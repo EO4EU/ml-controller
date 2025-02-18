@@ -16,12 +16,24 @@
     variables: 
       REPO_BRANCH: main
       HELM_BRANCH: main
+      CLUSTER: cineca-inference-server
   - if: $CI_COMMIT_BRANCH == "dev"
     variables:
       REPO_BRANCH: dev
       HELM_BRANCH: dev
+      CLUSTER: cineca-inference-server
+  - if: $CI_COMMIT_BRANCH == "backup"
+    variables:
+      REPO_BRANCH: backup
+      HELM_BRANCH: backup
+      CLUSTER: ecmwf-inference-server
+  - if: $CI_COMMIT_BRANCH == "dev-backup"
+    variables:
+      REPO_BRANCH: dev-backup
+      HELM_BRANCH: dev-backup
+      CLUSTER: ecmwf-inference-server
   before_script:
-    - "apk --no-cache add jq"
+    - "apk --no-cache add jq kubectl"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
       -d '{\"role_id\":\"'$VAULT_ROLE_ID'\",\"secret_id\":\"'$VAULT_SECRET_ID'\"}' \
       \"$VAULT_SERVER_URL/v1/auth/approle/login\" | \
@@ -51,11 +63,15 @@
     - "export S3_SECRET_KEY=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/s3_cloudferro_creds/gitlab\" | \
       jq -r '.data.data.s3_secret_key')"
+    - "curl -s -H \"$BEARER\" \
+      \"$VAULT_SERVER_URL/v1/kv/data/eo4eu-cicd/kubeconfigs/$CLUSTER\" | \
+      jq -r '.data.data.kubeconfig' | tee $REPO/kubeconfig"
     - "git clone -b $REPO_BRANCH \
       https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git"
     - "git clone -b $HELM_BRANCH \
       https://$CI_HELM_USERNAME:$CI_HELM_PASSWORD@$GITLAB/$HELM_NAMESPACE/$HELM.git"
     - "export TAG=$(git -C $REPO rev-parse HEAD)"
+    - "export KUBECONFIG=$REPO/kubeconfig"
 update_endpoint:
   extends: [.dagger]
   tags: [dagger]
@@ -134,19 +150,47 @@ push_image:
     - |
       if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         dagger call push \
-        --registry $REGISTRY \
-        --namespace $REPO_NAMESPACE \
-        --repo $REPO \
-        --tag $TAG \
-        --username $CI_REPO_USERNAME \
-        --password env:CI_REPO_PASSWORD \
-        --wkd build
+          --bucket $BUCKET \
+          --endpoint https://$MINIO \
+          --access env:S3_ACCESS_KEY \
+          --secret env:S3_SECRET_KEY \
+          --registry $REGISTRY \
+          --namespace $REPO_NAMESPACE \
+          --repo $REPO \
+          --srctag $TAG \
+          --dsttag $TAG \
+          --username $CI_REPO_USERNAME \
+          --password env:CI_REPO_PASSWORD \
+          --wkd build
+      fi
+clean_revisions:
+  extends: [.dagger]
+  tags: [dagger]
+  stage: .post
+  needs: [push_image]
+  artifacts:
+    untracked: true
+  script:
+    - cd $REPO
+    - |
+      export CHART_SERVICE=$(grep 'service_name:' cookiecutter-config.yaml | \
+        awk '{print $2}' | tr -d '"')
+    - |
+      export CHART_NAMESPACE=$(grep 'chart_name:' cookiecutter-config.yaml | \
+        awk '{print $2}' | tr -d '"')
+    - |
+      if git diff HEAD~1 | grep -Eq '^(\+  service_min_scale: "0")' && \
+         git diff HEAD~1 | grep -Eq '^(\+  service_disable_autoscaling: "true")' && \
+         git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
+        kubectl -n $CHART_NAMESPACE \
+          delete revision \
+          -lserving.knative.dev/configuration=$CHART_SERVICE
       fi
 update_helm:
   extends: [.dagger]
   tags: [dagger]
   stage: .post
-  needs: [push_image]
+  needs: [clean_revisions]
   artifacts:
     untracked: true
   script:
