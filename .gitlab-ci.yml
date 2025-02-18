@@ -178,7 +178,6 @@ clean_revisions:
         awk '{print $2}' | tr -d '"')
     - |
       if git diff HEAD~1 | grep -Eq '^(\+  service_min_scale: "0")' && \
-         git diff HEAD~1 | grep -Eq '^(\+  service_disable_autoscaling: "true")' && \
          git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
         kubectl -n $CHART_NAMESPACE \
           delete revision \
