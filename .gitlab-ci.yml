@@ -65,7 +65,7 @@
       jq -r '.data.data.s3_secret_key')"
     - "curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/eo4eu-cicd/kubeconfigs/$CLUSTER\" | \
-      jq -r '.data.data.kubeconfig' | tee $REPO/kubeconfig"
+      jq -r '.data.data.kubeconfig' > $REPO/kubeconfig"
     - "git clone -b $REPO_BRANCH \
       https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git"
     - "git clone -b $HELM_BRANCH \
