@@ -178,7 +178,7 @@ clean_dual:
   stage: .post
   needs: [push_image]
   script:
-    - cd $HELM
+    - cd $REPO
     - |
       if git diff HEAD~1 | grep -Eq '^(\-  service_min_scale: "0")' && \
          git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
