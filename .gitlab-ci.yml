@@ -10,18 +10,35 @@
     REPO: controller
     SERVICE: eo4eu-inference-server
     HELM: helm-repo
+    FLUX: flux-infra
     COOKIECUTTER_BRANCH: inference-server-controller
   rules:
   - if: $CI_COMMIT_BRANCH == "main"
     variables: 
       REPO_BRANCH: main
       HELM_BRANCH: main
+      CLUSTER_MAIN: cineca-inference-server
+      CLUSTER_DUAL: ecmwf-inference-server
   - if: $CI_COMMIT_BRANCH == "dev"
     variables:
       REPO_BRANCH: dev
       HELM_BRANCH: dev
+      CLUSTER_MAIN: cineca-inference-server
+      CLUSTER_DUAL: ecmwf-inference-server
+  - if: $CI_COMMIT_BRANCH == "backup"
+    variables:
+      REPO_BRANCH: backup
+      HELM_BRANCH: backup
+      CLUSTER_MAIN: ecmwf-inference-server
+      CLUSTER_DUAL: cineca-inference-server
+  - if: $CI_COMMIT_BRANCH == "dev-backup"
+    variables:
+      REPO_BRANCH: dev-backup
+      HELM_BRANCH: dev-backup
+      CLUSTER_MAIN: ecmwf-inference-server
+      CLUSTER_DUAL: cineca-inference-server
   before_script:
-    - "apk --no-cache add jq"
+    - "apk --no-cache add jq kubectl"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
       -d '{\"role_id\":\"'$VAULT_ROLE_ID'\",\"secret_id\":\"'$VAULT_SECRET_ID'\"}' \
       \"$VAULT_SERVER_URL/v1/auth/approle/login\" | \
@@ -45,17 +62,30 @@
     - "export CI_HELM_PASSWORD=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$HELM\" | \
       jq -r '.data.data.password')"
+    - "export CI_FLUX_USERNAME=$(curl -s -H \"$BEARER\" \
+      \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$FLUX\" | \
+      jq -r '.data.data.username')"
+    - "export CI_FLUX_PASSWORD=$(curl -s -H \"$BEARER\" \
+      \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$FLUX\" | \
+      jq -r '.data.data.password')"
     - "export S3_ACCESS_KEY=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/s3_cloudferro_creds/gitlab\" | \
       jq -r '.data.data.s3_access_key')"
     - "export S3_SECRET_KEY=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/s3_cloudferro_creds/gitlab\" | \
       jq -r '.data.data.s3_secret_key')"
+    - "curl -s -H \"$BEARER\" \
+      \"$VAULT_SERVER_URL/v1/kv/data/eo4eu-cicd/kubeconfigs/$CLUSTER_MAIN\" | \
+      jq -r '.data.data.kubeconfig' > /builds/$REPO_NAMESPACE/$REPO/kubeconfig"
     - "git clone -b $REPO_BRANCH \
       https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git"
     - "git clone -b $HELM_BRANCH \
       https://$CI_HELM_USERNAME:$CI_HELM_PASSWORD@$GITLAB/$HELM_NAMESPACE/$HELM.git"
+    - "git clone \
+      https://$CI_FLUX_USERNAME:$CI_FLUX_PASSWORD@$GITLAB/$HELM_NAMESPACE/$FLUX.git"
     - "export TAG=$(git -C $REPO rev-parse HEAD)"
+    - "export ROOTDIR=$(pwd)"
+    - "export KUBECONFIG=/builds/$REPO_NAMESPACE/$REPO/kubeconfig"
 update_endpoint:
   extends: [.dagger]
   tags: [dagger]
@@ -142,11 +172,30 @@ push_image:
         --password env:CI_REPO_PASSWORD \
         --wkd build
       fi
-update_helm:
+clean_dual:
   extends: [.dagger]
   tags: [dagger]
   stage: .post
   needs: [push_image]
+  script:
+    - cd $HELM
+    - |
+      if git diff HEAD~1 | grep -Eq '^(\-  service_min_scale: "0")' && \
+         git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
+        cd $ROOTDIR/$FLUX
+        git config user.email "federico.fornari@ecmwf.int"
+        git config user.name "Dagger"
+        mv clusters/$CLUSTER_DUAL/controller/helm-release-${REPO_BRANCH}.yaml \
+        spare/$CLUSTER_DUAL/controller/
+        git add --all
+        git commit -m "Updated flux repo by Dagger" || true
+        git push
+      fi
+update_helm:
+  extends: [.dagger]
+  tags: [dagger]
+  stage: .post
+  needs: [clean_dual]
   artifacts:
     untracked: true
   script:
