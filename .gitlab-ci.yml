@@ -10,28 +10,37 @@
     REPO: controller
     SERVICE: eo4eu-inference-server
     HELM: helm-repo
+    FLUX: fleet-infra
     COOKIECUTTER_BRANCH: inference-server-controller
   rules:
   - if: $CI_COMMIT_BRANCH == "main"
     variables: 
       REPO_BRANCH: main
       HELM_BRANCH: main
-      CLUSTER: cineca-inference-server
+      CLUSTER_ENV: main
+      CLUSTER_MAIN: cineca-inference-server
+      CLUSTER_DUAL: ecmwf-inference-server
   - if: $CI_COMMIT_BRANCH == "dev"
     variables:
       REPO_BRANCH: dev
       HELM_BRANCH: dev
-      CLUSTER: cineca-inference-server
+      CLUSTER_ENV: dev
+      CLUSTER_MAIN: cineca-inference-server
+      CLUSTER_DUAL: ecmwf-inference-server
   - if: $CI_COMMIT_BRANCH == "backup"
     variables:
       REPO_BRANCH: backup
       HELM_BRANCH: backup
-      CLUSTER: ecmwf-inference-server
+      CLUSTER_ENV: main
+      CLUSTER_MAIN: ecmwf-inference-server
+      CLUSTER_DUAL: cineca-inference-server
   - if: $CI_COMMIT_BRANCH == "dev-backup"
     variables:
       REPO_BRANCH: dev-backup
       HELM_BRANCH: dev-backup
-      CLUSTER: ecmwf-inference-server
+      CLUSTER_ENV: dev
+      CLUSTER_MAIN: ecmwf-inference-server
+      CLUSTER_DUAL: cineca-inference-server
   before_script:
     - "apk --no-cache add jq kubectl"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
@@ -57,6 +66,12 @@
     - "export CI_HELM_PASSWORD=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$HELM\" | \
       jq -r '.data.data.password')"
+    - "export CI_FLUX_USERNAME=$(curl -s -H \"$BEARER\" \
+      \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$FLUX\" | \
+      jq -r '.data.data.username')"
+    - "export CI_FLUX_PASSWORD=$(curl -s -H \"$BEARER\" \
+      \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$FLUX\" | \
+      jq -r '.data.data.password')"
     - "export S3_ACCESS_KEY=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/s3_cloudferro_creds/gitlab\" | \
       jq -r '.data.data.s3_access_key')"
@@ -70,8 +85,10 @@
       https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git"
     - "git clone -b $HELM_BRANCH \
       https://$CI_HELM_USERNAME:$CI_HELM_PASSWORD@$GITLAB/$HELM_NAMESPACE/$HELM.git"
+    - "git clone \
+      https://$CI_FLUX_USERNAME:$CI_FLUX_PASSWORD@$GITLAB/$HELM_NAMESPACE/$FLUX.git"
     - "export TAG=$(git -C $REPO rev-parse HEAD)"
-    - "export KUBECONFIG=/builds/$REPO_NAMESPACE/$REPO/kubeconfig"
+    - "export ROOTDIR=$(pwd)"
 update_endpoint:
   extends: [.dagger]
   tags: [dagger]
@@ -163,7 +180,7 @@ push_image:
           --password env:CI_REPO_PASSWORD \
           --wkd build
       fi
-clean_revisions:
+clean_dual:
   extends: [.dagger]
   tags: [dagger]
   stage: .post
@@ -171,23 +188,45 @@ clean_revisions:
   script:
     - cd $REPO
     - |
-      export CHART_SERVICE=$(grep 'service_name:' cookiecutter-config.yaml | \
-        awk '{print $2}' | tr -d '"')
-    - |
-      export CHART_NAMESPACE=$(grep 'chart_name:' cookiecutter-config.yaml | \
-        awk '{print $2}' | tr -d '"')
+      if git diff HEAD~1 | grep -Eq '^(\-  service_min_scale: "0")' && \
+         git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
+        cd $ROOTDIR/$FLUX
+        git config user.email "federico.fornari@ecmwf.int"
+        git config user.name "Dagger"
+        mv clusters/$CLUSTER_DUAL/controller/helm-release-${CLUSTER_ENV}.yaml \
+        spare/$CLUSTER_DUAL/controller/ || true
+        mv spare/$CLUSTER_MAIN/controller/helm-release-${CLUSTER_ENV}.yaml \
+        clusters/$CLUSTER_MAIN/controller/ || true
+        git add --all
+        git commit -m "Updated flux repo by Dagger" || true
+        git push
+      fi
+clean_main:
+  extends: [.dagger]
+  tags: [dagger]
+  stage: .post
+  needs: [clean_dual]
+  script:
+    - cd $REPO
     - |
       if git diff HEAD~1 | grep -Eq '^(\+  service_min_scale: "0")' && \
          git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
-        kubectl -n $CHART_NAMESPACE \
-          delete revision \
-          -lserving.knative.dev/configuration=$CHART_SERVICE
+        cd $ROOTDIR/$FLUX
+        git config user.email "federico.fornari@ecmwf.int"
+        git config user.name "Dagger"
+        mv clusters/$CLUSTER_MAIN/controller/helm-release-${CLUSTER_ENV}.yaml \
+        spare/$CLUSTER_MAIN/controller/ || true
+        mv spare/$CLUSTER_DUAL/controller/helm-release-${CLUSTER_ENV}.yaml \
+        clusters/$CLUSTER_DUAL/controller/ || true
+        git add --all
+        git commit -m "Updated flux repo by Dagger" || true
+        git push
       fi
 update_helm:
   extends: [.dagger]
   tags: [dagger]
   stage: .post
-  needs: [clean_revisions]
+  needs: [clean_main]
   artifacts:
     untracked: true
   script:
