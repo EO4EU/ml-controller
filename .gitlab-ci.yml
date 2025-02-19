@@ -16,6 +16,7 @@
   - if: $CI_COMMIT_BRANCH == "main"
     variables: 
       REPO_BRANCH: main
+      DUAL_BRANCH: backup
       HELM_BRANCH: main
       CLUSTER_ENV: main
       CLUSTER_MAIN: cineca-inference-server
@@ -23,6 +24,7 @@
   - if: $CI_COMMIT_BRANCH == "dev"
     variables:
       REPO_BRANCH: dev
+      DUAL_BRANCH: dev-backup
       HELM_BRANCH: dev
       CLUSTER_ENV: dev
       CLUSTER_MAIN: cineca-inference-server
@@ -30,6 +32,7 @@
   - if: $CI_COMMIT_BRANCH == "backup"
     variables:
       REPO_BRANCH: backup
+      DUAL_BRANCH: main
       HELM_BRANCH: backup
       CLUSTER_ENV: main
       CLUSTER_MAIN: ecmwf-inference-server
@@ -37,6 +40,7 @@
   - if: $CI_COMMIT_BRANCH == "dev-backup"
     variables:
       REPO_BRANCH: dev-backup
+      DUAL_BRANCH: dev
       HELM_BRANCH: dev-backup
       CLUSTER_ENV: dev
       CLUSTER_MAIN: ecmwf-inference-server
@@ -83,6 +87,9 @@
       jq -r '.data.data.kubeconfig' > /builds/$REPO_NAMESPACE/$REPO/kubeconfig"
     - "git clone -b $REPO_BRANCH \
       https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git"
+    - "git clone -b $DUAL_BRANCH \
+      https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git \
+      ${REPO}_${DUAL_BRANCH}"
     - "git clone -b $HELM_BRANCH \
       https://$CI_HELM_USERNAME:$CI_HELM_PASSWORD@$GITLAB/$HELM_NAMESPACE/$HELM.git"
     - "git clone \
@@ -200,6 +207,14 @@ clean_dual:
         git add --all
         git commit -m "Updated flux repo by Dagger" || true
         git push
+        cd $ROOTDIR/${REPO}_${DUAL_BRANCH}
+        git config user.email "federico.fornari@ecmwf.int"
+        git config user.name "Dagger"
+        sed -i 's/  service_enabled: "true"/  service_enabled: "false"/' \
+        cookiecutter-config.yaml
+        git add --all
+        git commit -m "Updated $REPO repo by Dagger" || true
+        git push -o ci.skip
       fi
 clean_main:
   extends: [.dagger]
@@ -221,6 +236,14 @@ clean_main:
         git add --all
         git commit -m "Updated flux repo by Dagger" || true
         git push
+        cd $ROOTDIR/${REPO}_${DUAL_BRANCH}
+        git config user.email "federico.fornari@ecmwf.int"
+        git config user.name "Dagger"
+        sed -i 's/  service_enabled: "false"/  service_enabled: "true"/' \
+        cookiecutter-config.yaml
+        git add --all
+        git commit -m "Updated $REPO repo by Dagger" || true
+        git push -o ci.skip
       fi
 update_helm:
   extends: [.dagger]
