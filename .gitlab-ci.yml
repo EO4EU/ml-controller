@@ -188,7 +188,7 @@ clean_dual:
   script:
     - cd $REPO
     - |
-      if git diff HEAD~1 | grep -Eq '^(\-  service_min_scale: "0")' && \
+      if git diff HEAD~1 | grep -Eq '^(\-  service_enabled: "false")' && \
          git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
         cd $ROOTDIR/$FLUX
         git config user.email "federico.fornari@ecmwf.int"
@@ -209,7 +209,7 @@ clean_main:
   script:
     - cd $REPO
     - |
-      if git diff HEAD~1 | grep -Eq '^(\+  service_min_scale: "0")' && \
+      if git diff HEAD~1 | grep -Eq '^(\+  service_enabled: "false")' && \
          git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
         cd $ROOTDIR/$FLUX
         git config user.email "federico.fornari@ecmwf.int"
