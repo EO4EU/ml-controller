@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.3.4"
+  chart_version: "0.3.8"
   need_dep_chart: "no"
   include_service: "yes"
   include_rbac: "yes"
@@ -13,7 +13,7 @@ default_context:
   service_environment_label: "development"
   service_service_label: "Inference_Server"
   service_component_label: "controller"
-  service_enabled: "true"
+  service_enabled: "false"
   include_namespace: "yes"
   include_kafka_source: "yes"
   kafka_source_name: "kafka-source-controller-dev"
