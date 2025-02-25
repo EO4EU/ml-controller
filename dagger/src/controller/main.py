@@ -229,7 +229,7 @@ class Controller:
                 "registry.local",
                 self.registry(bucket, endpoint, accesskey, secretkey)
             )
-            .from_("rapidfort/skopeo-ib:latest")
+            .from_("rapidfort/skopeo-ib:v1.16.1")
             .with_file("/tmp/config.json", config.file("/tmp/config.json"), owner="1000:1000")
             .with_exec(
                 [
