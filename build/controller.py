@@ -120,7 +120,7 @@ def createResources(TopicIn,namespace,serviceName,requestData):
           "namespace": namespace
       },
         "spec": {
-            "initialOffset": "latest",
+            "initialOffset": "earliest",
             "bootstrapServers": ["kafka-external.apps.eo4eu.eu:9092"],
             "topics": [TopicIn],
             "sink": {
