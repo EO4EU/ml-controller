@@ -38,7 +38,6 @@ def create_app():
     app.logger.info("Starting up...", extra={'logName': 'startup'})
 
     # Provisioner receiving topics to listen by http in a post request.
-
     # Main entry point of the http request.
     # This function is called when a post request is received on the root path.
     # The post request must contain a json with the following format:
