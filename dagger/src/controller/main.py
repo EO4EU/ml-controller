@@ -189,10 +189,15 @@ class Controller:
     @function
     async def push(
         self,
+        bucket: Annotated[str, Doc("S3 Bucket")],
+        endpoint: Annotated[str, Doc("S3 Endpoint")],
+        access: Annotated[dagger.Secret, Doc("S3 Access Key")],
+        secret: Annotated[dagger.Secret, Doc("S3 Secret Key")],
         registry: Annotated[str, Doc("Registry address")],
         namespace: Annotated[str, Doc("Registry namespace")],
         repo: Annotated[str, Doc("Registry repo")],
-        tag: Annotated[str, Doc("Image tag")],
+        srctag: Annotated[str, Doc("Source image tag")],
+        dsttag: Annotated[str, Doc("Destination image tag")],
         username: Annotated[str, Doc("Registry username")],
         password: Annotated[dagger.Secret, Doc("Registry password")],
         wkd: Annotated[
@@ -201,6 +206,8 @@ class Controller:
         ],
     ) -> str:
         """Build and publish image from existing Dockerfile"""
+        accesskey = await access.plaintext()
+        secretkey = await secret.plaintext()
         blob = await self.encode(username, password)
         config = (
             dag.container()
@@ -218,18 +225,22 @@ class Controller:
         )
         return await (
             dag.container(platform=dagger.Platform("linux/amd64"))
-            .from_("gcr.io/kaniko-project/executor:debug")
-            .with_file("/kaniko/.docker/config.json", config.file("/tmp/config.json"))
-            .with_directory("/kaniko/.docker", wkd)
+            .with_service_binding(
+                "registry.local",
+                self.registry(bucket, endpoint, accesskey, secretkey)
+            )
+            .from_("rapidfort/skopeo-ib:v1.16.1")
+            .with_file("/tmp/config.json", config.file("/tmp/config.json"), owner="1000:1000")
             .with_exec(
                 [
-                    "/kaniko/executor",
-                    "--context", 
-                    "dir:///kaniko/.docker/",
-                    "--dockerfile",
-                    "/kaniko/.docker/Dockerfile",
-                    "--destination",
-                    f"{registry}/{namespace}/{repo}:{tag}"
+                    "skopeo",
+                    "copy",
+                    "--src-tls-verify=false",
+                    "--src-no-creds",
+                    "--dest-authfile",
+                    "/tmp/config.json",
+                    f"docker://registry.local/{repo}:{srctag}",
+                    f"docker://{registry}/{namespace}/{repo}:{dsttag}"
                 ]
             )
             .stdout()
