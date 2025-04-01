@@ -2,7 +2,7 @@
   image: mikebrown008/ci-cli-base:0.5
   variables:
     MINIO: s3.waw3-2.cloudferro.com
-    BUCKET: registry-inference-server-controller-dev
+    BUCKET: registry-inference-server-controller
     GITLAB: git.apps.eo4eu.eu
     REPO_NAMESPACE: eo4eu/eo4eu-inference-server
     HELM_NAMESPACE: eo4eu/eo4eu-cicd/cicd-infra
@@ -10,43 +10,18 @@
     REPO: controller
     SERVICE: eo4eu-inference-server
     HELM: helm-repo
-    FLUX: fleet-infra
     COOKIECUTTER_BRANCH: inference-server-controller
   rules:
   - if: $CI_COMMIT_BRANCH == "main"
     variables: 
       REPO_BRANCH: main
-      DUAL_BRANCH: backup
       HELM_BRANCH: main
-      CLUSTER_ENV: main
-      CLUSTER_MAIN: cineca-inference-server
-      CLUSTER_DUAL: ecmwf-inference-server
   - if: $CI_COMMIT_BRANCH == "dev"
     variables:
       REPO_BRANCH: dev
-      DUAL_BRANCH: dev-backup
       HELM_BRANCH: dev
-      CLUSTER_ENV: dev
-      CLUSTER_MAIN: cineca-inference-server
-      CLUSTER_DUAL: ecmwf-inference-server
-  - if: $CI_COMMIT_BRANCH == "backup"
-    variables:
-      REPO_BRANCH: backup
-      DUAL_BRANCH: main
-      HELM_BRANCH: backup
-      CLUSTER_ENV: main
-      CLUSTER_MAIN: ecmwf-inference-server
-      CLUSTER_DUAL: cineca-inference-server
-  - if: $CI_COMMIT_BRANCH == "dev-backup"
-    variables:
-      REPO_BRANCH: dev-backup
-      DUAL_BRANCH: dev
-      HELM_BRANCH: dev-backup
-      CLUSTER_ENV: dev
-      CLUSTER_MAIN: ecmwf-inference-server
-      CLUSTER_DUAL: cineca-inference-server
   before_script:
-    - "apk --no-cache add jq kubectl"
+    - "apk --no-cache add jq"
     - "export VAULT_TOKEN=$(curl -s -X PUT \
       -d '{\"role_id\":\"'$VAULT_ROLE_ID'\",\"secret_id\":\"'$VAULT_SECRET_ID'\"}' \
       \"$VAULT_SERVER_URL/v1/auth/approle/login\" | \
@@ -70,32 +45,17 @@
     - "export CI_HELM_PASSWORD=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$HELM\" | \
       jq -r '.data.data.password')"
-    - "export CI_FLUX_USERNAME=$(curl -s -H \"$BEARER\" \
-      \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$FLUX\" | \
-      jq -r '.data.data.username')"
-    - "export CI_FLUX_PASSWORD=$(curl -s -H \"$BEARER\" \
-      \"$VAULT_SERVER_URL/v1/kv/data/gitlab_credentials/$FLUX\" | \
-      jq -r '.data.data.password')"
     - "export S3_ACCESS_KEY=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/s3_cloudferro_creds/gitlab\" | \
       jq -r '.data.data.s3_access_key')"
     - "export S3_SECRET_KEY=$(curl -s -H \"$BEARER\" \
       \"$VAULT_SERVER_URL/v1/kv/data/s3_cloudferro_creds/gitlab\" | \
       jq -r '.data.data.s3_secret_key')"
-    - "curl -s -H \"$BEARER\" \
-      \"$VAULT_SERVER_URL/v1/kv/data/eo4eu-cicd/kubeconfigs/$CLUSTER\" | \
-      jq -r '.data.data.kubeconfig' > /builds/$REPO_NAMESPACE/$REPO/kubeconfig"
     - "git clone -b $REPO_BRANCH \
       https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git"
-    - "git clone -b $DUAL_BRANCH \
-      https://$CI_REPO_USERNAME:$CI_REPO_PASSWORD@$GITLAB/$REPO_NAMESPACE/$REPO.git \
-      ${REPO}_${DUAL_BRANCH}"
     - "git clone -b $HELM_BRANCH \
       https://$CI_HELM_USERNAME:$CI_HELM_PASSWORD@$GITLAB/$HELM_NAMESPACE/$HELM.git"
-    - "git clone \
-      https://$CI_FLUX_USERNAME:$CI_FLUX_PASSWORD@$GITLAB/$HELM_NAMESPACE/$FLUX.git"
     - "export TAG=$(git -C $REPO rev-parse HEAD)"
-    - "export ROOTDIR=$(pwd)"
 update_endpoint:
   extends: [.dagger]
   tags: [dagger]
@@ -174,82 +134,19 @@ push_image:
     - |
       if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
         dagger call push \
-          --bucket $BUCKET \
-          --endpoint https://$MINIO \
-          --access env:S3_ACCESS_KEY \
-          --secret env:S3_SECRET_KEY \
-          --registry $REGISTRY \
-          --namespace $REPO_NAMESPACE \
-          --repo $REPO \
-          --srctag $TAG \
-          --dsttag $TAG \
-          --username $CI_REPO_USERNAME \
-          --password env:CI_REPO_PASSWORD \
-          --wkd build
-      fi
-clean_dual:
-  extends: [.dagger]
-  tags: [dagger]
-  stage: .post
-  needs: [push_image]
-  script:
-    - cd $REPO
-    - |
-      if git diff HEAD~1 | grep -Eq '^(\-  service_enabled: "false")' && \
-         git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
-        cd $ROOTDIR/$FLUX
-        git config user.email "federico.fornari@ecmwf.int"
-        git config user.name "Dagger"
-        mv clusters/$CLUSTER_DUAL/controller/helm-release-${CLUSTER_ENV}.yaml \
-        spare/$CLUSTER_DUAL/controller/ || true
-        mv spare/$CLUSTER_MAIN/controller/helm-release-${CLUSTER_ENV}.yaml \
-        clusters/$CLUSTER_MAIN/controller/ || true
-        git add --all
-        git commit -m "Updated flux repo by Dagger" || true
-        git push
-        cd $ROOTDIR/${REPO}_${DUAL_BRANCH}
-        git config user.email "federico.fornari@ecmwf.int"
-        git config user.name "Dagger"
-        sed -i 's/  service_enabled: "true"/  service_enabled: "false"/' \
-        cookiecutter-config.yaml
-        git add --all
-        git commit -m "Updated $REPO repo by Dagger" || true
-        git push -o ci.skip
-      fi
-clean_main:
-  extends: [.dagger]
-  tags: [dagger]
-  stage: .post
-  needs: [clean_dual]
-  script:
-    - cd $REPO
-    - |
-      if git diff HEAD~1 | grep -Eq '^(\+  service_enabled: "false")' && \
-         git diff HEAD~1 | grep -Eq '^(\+  chart_version:)'; then
-        cd $ROOTDIR/$FLUX
-        git config user.email "federico.fornari@ecmwf.int"
-        git config user.name "Dagger"
-        mv clusters/$CLUSTER_MAIN/controller/helm-release-${CLUSTER_ENV}.yaml \
-        spare/$CLUSTER_MAIN/controller/ || true
-        mv spare/$CLUSTER_DUAL/controller/helm-release-${CLUSTER_ENV}.yaml \
-        clusters/$CLUSTER_DUAL/controller/ || true
-        git add --all
-        git commit -m "Updated flux repo by Dagger" || true
-        git push
-        cd $ROOTDIR/${REPO}_${DUAL_BRANCH}
-        git config user.email "federico.fornari@ecmwf.int"
-        git config user.name "Dagger"
-        sed -i 's/  service_enabled: "false"/  service_enabled: "true"/' \
-        cookiecutter-config.yaml
-        git add --all
-        git commit -m "Updated $REPO repo by Dagger" || true
-        git push -o ci.skip
+        --registry $REGISTRY \
+        --namespace $REPO_NAMESPACE \
+        --repo $REPO \
+        --tag $TAG \
+        --username $CI_REPO_USERNAME \
+        --password env:CI_REPO_PASSWORD \
+        --wkd build
       fi
 update_helm:
   extends: [.dagger]
   tags: [dagger]
   stage: .post
-  needs: [clean_main]
+  needs: [push_image]
   artifacts:
     untracked: true
   script:
