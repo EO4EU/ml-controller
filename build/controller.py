@@ -126,8 +126,8 @@ def createResources(TopicIn,namespace,serviceName,requestData):
             "sink": {
                 "ref": {
                     "apiVersion": "serving.knative.dev/v1",
-                    "kind": "Service",
-                    "name": serviceName.lower(),
+                    "kind": "Route",
+                    "name": serviceName.lower()+"-prod",
                     "namespace": namespace,
                 },
                 "uri": "/json-config-"+TopicIn.lower()
