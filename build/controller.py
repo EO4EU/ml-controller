@@ -145,7 +145,7 @@ def create_app():
                 "namespace": namespace
             },
                 "spec": {
-                    "initialOffset": "latest",
+                    "initialOffset": "earliest",
                     "bootstrapServers": ["kafka-external.dev.apps.eo4eu.eu:9092"],
                     "topics": [TopicIn],
                     "sink": {
