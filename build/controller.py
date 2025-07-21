@@ -26,13 +26,13 @@ def convert_bytes(obj):
 def create_app():
     app = Flask(__name__)
     Producer=KafkaProducer(bootstrap_servers="kafka-external.dev.apps.eo4eu.eu:9092",value_serializer=lambda v: json.dumps(v,default=convert_bytes).encode('utf-8'),key_serializer=str.encode)
-    handler = KafkaHandler(producer=Producer,source='ML.Controller')
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    filter = DefaultContextFilter()
-    app.logger.addFilter(filter)
-    app.logger.addHandler(handler)
-    app.logger.addHandler(console_handler)
+    # handler = KafkaHandler(producer=Producer,source='ML.Controller')
+    # console_handler = logging.StreamHandler()
+    # console_handler.setLevel(logging.DEBUG)
+    # filter = DefaultContextFilter()
+    # app.logger.addFilter(filter)
+    # app.logger.addHandler(handler)
+    # app.logger.addHandler(console_handler)
     app.logger.setLevel(logging.DEBUG)
 
     app.logger.info("Starting up...", extra={'logName': 'startup'})
@@ -145,7 +145,7 @@ def create_app():
                 "namespace": namespace
             },
                 "spec": {
-                    "initialOffset": "latest",
+                    "initialOffset": "earliest",
                     "bootstrapServers": ["kafka-external.dev.apps.eo4eu.eu:9092"],
                     "topics": [TopicIn],
                     "sink": {
