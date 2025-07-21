@@ -6,7 +6,7 @@ default_context:
   include_rbac: "yes"
   service_name: "controller-communication-dsl-dev"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-inference-server/controller"
-  service_image_tag: "affac81622db1acebd2fdf2c5cb8d44e254dfdc9"
+  service_image_tag: "8a434a60a9bc4e5dc14e7f2d6475c426298b2586"
   service_image_pull_policy: "Always"
   service_image_secret: "controller-registry"
   service_container_port: "8080"
