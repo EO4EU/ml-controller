@@ -295,6 +295,8 @@ class Controller:
             ])
         )
         
+        return container.directory("/output")
+
     @function
     async def synthetic_report(
         self,
