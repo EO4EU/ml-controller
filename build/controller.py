@@ -8,7 +8,7 @@ import sys
 app = Flask(__name__)
 
 
-# Provisioner receiving topics to listen by http in a post request. 
+# Provisioner receiving topics to listen by http in a post request.
 
 # Main entry point of the http request.
 # This function is called when a post request is received on the root path.
