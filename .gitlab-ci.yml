@@ -12,6 +12,7 @@
     HELM: helm-repo
     COOKIECUTTER_BRANCH: inference-server-controller
     YAML_RULES: rules/python_rules.yaml
+    CONTEXT: build
   rules:
   - if: $CI_COMMIT_BRANCH == "main"
     variables: 
@@ -68,9 +69,9 @@ update_endpoint:
         export KAFKA_ENDPOINT=$(grep 'kafka_source_endpoint:' \
           cookiecutter-config.yaml | \
           awk '{print $2}' | tr -d '"')
-        find build -type f -exec sed -i \
+        find $CONTEXT -type f -exec sed -i \
           's/\(\s*"bootstrapServers": "\)\(.*\)/\1'"$KAFKA_ENDPOINT"'",/g' {} \;
-        find build -type f -exec sed -i \
+        find $CONTEXT -type f -exec sed -i \
           's/\(\s*"bootstrapServers": \["\)\(.*\)/\1'"$KAFKA_ENDPOINT"'"\],/g' {} \;
         git config user.email "federico.fornari@ecmwf.int"
         git config user.name "Cookiecutter"
@@ -86,7 +87,7 @@ build_image:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^('$CONTEXT'/)'; then
         dagger call build \
         --bucket $BUCKET \
         --endpoint https://$MINIO \
@@ -94,7 +95,7 @@ build_image:
         --secret env:S3_SECRET_KEY \
         --repo $REPO \
         --tag $TAG \
-        --wkd build
+        --wkd $CONTEXT
       fi
 scan_image:
   rules:
@@ -113,7 +114,7 @@ scan_image:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^('$CONTEXT'/)'; then
         dagger call scan \
         --bucket $BUCKET \
         --endpoint https://$MINIO \
@@ -137,15 +138,20 @@ scan_image:
         --wkd /builds/$REPO_NAMESPACE/$REPO \
         export \
         --path \
-        /builds/$REPO_NAMESPACE/$REPO/sbom-report.html
-        dagger call analyze-with-sonarqube \
-          --yaml-rules $YAML_RULES \
-          --source-directory build \
-          --sonar-host-url $SONAR_HOST_URL \
-          --sonar-token $SONAR_TOKEN \
-          --sonar-project-key $SONAR_PROJECT_KEY \
-          --output-name sonar-report.sarif \
-          export --path /builds/$REPO_NAMESPACE/$REPO
+        /builds/$REPO_NAMESPACE/$REPO
+      dagger call analyze-with-sonarqube \
+        --yaml-rules $YAML_RULES \
+        --source-directory $CONTEXT \
+        --sonar-host-url $SONAR_HOST_URL \
+        --sonar-token $SONAR_TOKEN \
+        --sonar-project-key $SONAR_PROJECT_KEY \
+        --output-name sonar-report.sarif \
+        export --path /builds/$REPO_NAMESPACE/$REPO/
+      dagger call synthetic-report \
+        --sbom-file /builds/$REPO_NAMESPACE/$REPO/sbom-report.cdx.json \
+        --sarif-file /builds/$REPO_NAMESPACE/$REPO/sonar-report.sarif \
+        --severity-threshold HIGH \
+        export --path /builds/$REPO_NAMESPACE/$REPO
       fi
   artifacts:
     when: always
@@ -154,6 +160,7 @@ scan_image:
       - vulnerabilities.html
       - sbom-report.html
       - sonar-report.html
+      - synthetic-report.html
 push_image:
   extends: [.dagger]
   tags: [dagger]
@@ -166,7 +173,7 @@ push_image:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^('$CONTEXT'/)'; then
         dagger call push \
           --bucket $BUCKET \
           --endpoint https://$MINIO \
@@ -179,7 +186,7 @@ push_image:
           --dsttag $TAG \
           --username $CI_REPO_USERNAME \
           --password env:CI_REPO_PASSWORD \
-          --wkd build
+          --wkd $CONTEXT
       fi
 update_helm:
   extends: [.dagger]
@@ -191,7 +198,7 @@ update_helm:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^('$CONTEXT'/)'; then
         sed -i 's/\(  service_image_tag: "\)\(.*\)/\1'"$TAG"'"/g' cookiecutter-config.yaml
         git config user.email "federico.fornari@ecmwf.int"
         git config user.name "Cookiecutter"
@@ -233,7 +240,7 @@ clean_registry:
   script:
     - cd $REPO
     - |
-      if git diff --name-only HEAD~1 | grep -Eq '^(build/)'; then
+      if git diff --name-only HEAD~1 | grep -Eq '^('$CONTEXT'/)'; then
         dagger call clean \
         --bucket $BUCKET \
         --endpoint https://$MINIO \
