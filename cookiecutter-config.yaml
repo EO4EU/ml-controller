@@ -1,6 +1,6 @@
 default_context:
   chart_name: "controller"
-  chart_version: "0.2.17"
+  chart_version: "0.2.18"
   need_dep_chart: "no"
   include_service: "yes"
   service_name: "controller-communication-dsl"
