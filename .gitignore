@@ -4,3 +4,6 @@ tritonserver/
 vulnerabilities.html
 html.tpl
 .DS_Store
+sbom-*
+sonar-*
+synthetic-*
