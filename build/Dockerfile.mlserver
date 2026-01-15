@@ -1,0 +1,34 @@
+FROM seldonio/mlserver:1.7.1
+
+RUN pip uninstall -y \
+    mlserver-alibi-detect \
+    mlserver-alibi-explain \
+    mlserver-huggingface \
+    mlserver-lightgbm \
+    mlserver-mlflow \
+    mlserver-pytorch \
+    mlserver-tensorflow \
+    mlserver-triton \
+    mlserver-xgboost
+
+RUN microdnf remove -y \
+      gcc \
+      gcc-c++ \
+      make \
+      cmake \
+      git \
+      curl \
+      wget \
+      tar \
+      unzip \
+      which \
+    && microdnf clean all
+
+RUN conda clean -a -y
+
+RUN useradd -u 1000 -r -s /sbin/nologin mlserver && \
+    chown -R mlserver:mlserver /opt/conda
+
+USER mlserver
+
+ENTRYPOINT ["mlserver"]
