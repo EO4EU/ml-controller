@@ -27,7 +27,8 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
         "starlette==0.49.1" \
         "keras==3.12.0" \
         "fonttools>=4.60.2" \
-        "pyasn1==0.6.2"
+        "pyasn1==0.6.2" \
+        "numpy==2.2.6"
 
 RUN microdnf remove -y \
         glib2-devel \
