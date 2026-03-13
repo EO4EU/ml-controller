@@ -7,3 +7,5 @@ html.tpl
 sbom-*
 sonar-*
 synthetic-*
+*.txt
+tritonserver_vuln_responses.md
