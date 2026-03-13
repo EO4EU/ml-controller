@@ -9,3 +9,4 @@ sonar-*
 synthetic-*
 *.txt
 tritonserver_vuln_responses.md
+mlserver_vuln_responses.md
