@@ -151,7 +151,7 @@ def create_app():
                     "sink": {
                         "ref": {
                             "apiVersion": "serving.knative.dev/v1",
-                            "kind": "Service",
+                            "kind": "Route",
                             "name": serviceName.lower(),
                             "namespace": namespace,
                         },
